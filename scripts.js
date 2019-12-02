@@ -1,80 +1,194 @@
-const songLyricsArray = "Don't want to be a fool for you, Just another player in your game for two, You may hate me but it ain't no lie, Baby bye bye bye, Bye bye, I Don't want to make it tough, I just want to tell you that I've had enough, It might sound crazy but it ain't no lie, Baby bye bye bye".split(', ');
-
-//INITIAL REDUX STATE
-const initialState = {
-  songLyricsArray: songLyricsArray, // this ensures that songLyricsArray is part of our Redux state. 
-  arrayPosition: 0, // this is our key, which will refer to which lyric in the array the user is on. By setting to 0, we are telling the app it should begin on the first song lyric when launched.  
-}   
- 
-//REDUCER:
-const reducer = (state = initialState, action) => {
-  switch (action.type) {
-    case 'NEXT_LYRIC':
-      let newArrayPosition = state.arrayPosition +1;
-      let newState = {
-        songLyricsArray: state.songLyricsArray,
-        arrayPosition: newArrayPosition,
+//lyric info
+const songList = {
+  1: "Don't want to be a fool for you, Just another player in your game for two, You may hate me but it ain't no lie, Baby bye bye bye, Bye bye, I Don't want to make it tough, I just want to tell you that I've had enough, It might sound crazy but it ain't no lie, Baby bye bye bye".split(', '),
+  2: "Twenty-five years and my life is still, Trying to get up that great big hill of hope, For a destination, I realized quickly when I knew I should, That the world was made up of this brotherhood of man, For whatever that means, And so I cry sometimes when I'm lying in bed, Just to get it all out what's in my head, And I, I am feeling a little peculiar, And so I wake in the morning and I step outside, And I take a deep breath and I get real high, and I Scream from the top of my lungs, What's going on?, And I say hey yeah yeah hey yeah yeah, I said hey what's going on?, And I say hey yeah yeah hey yeah yeah,I said hey what's going on?".split(', ')
+  };
+  
+  //initial redux state
+  const initialState = {
+    currentSongId: null,
+    songsById: {
+      1: {
+        title: "Bye Bye Bye",
+        artist: "N'Sync",
+        songId: 1,
+        songArray: songList[1],
+        arrayPosition: 0,
+      },
+      2: {
+        title: "What's Goin' On",
+        artist: "Four Non-Blondes",
+        songId: 2,
+        songArray: songList[2],
+        arrayPosition: 0,
       }
-      return newState;
-    default: 
-      return state;
-}
-}
-// the default statement will execute if the action.type is NOT equivalent to NEXT_LYRIC
-
-
-
-// JEST TESTS AND SETUP:
-const { expect } = window; // because the CDN loads the Expect library as a object belonging to window. ONLY WHEN USING THE CDN.
-
-expect (reducer(initialState, { type: null})).toEqual(initialState);
-//the most basic thing any reducer can do is return our initial state without mutating it
-
-expect (reducer(initialState, { type: 'NEXT_LYRIC'})).toEqual({
-  songLyricsArray: songLyricsArray, 
-  arrayPosition: 1
-});
-//We're testing our reducer has a NEXT_LYRIC action type that can advance the arrayPosition slice of our State. This test will fail until we add logic to pass the test in scripts.js. 
-
-
-
-
-
-//REDUX "STORE"
-const { createStore } = Redux; //imports the createStore() method from teh Redux library. this is REQUIRED. 
-const store = createStore(reducer); // uses createStore() to construct a Redux store named STORE. When creating a store we must ALWAYS PROVIDE A REDUCER AS AN ARGUMENT. 
-console.log(store.getState()); //console logging our store's state. 
-// console.log(initialState);
-//"initialState" is a general Redux term. Similar to how we defined initial state within our constructor() methods last week. 
-
-//RENDERING STATE IN DOM
-// RENDERING STATE IN DOM
-const renderLyrics = () => {
-  const lyricsDisplay = document.getElementById('lyrics');
-   //defines a lyricsDisplay constant referring to the div with a 'lyrics' ID in index.html
-  while (lyricsDisplay.firstChild) {
-    lyricsDisplay.removeChild(lyricsDisplay.firstChild);
+    }
+  };
+  
+  //reducer will go here
+  const lyricChangeReducer = (state = initialState.songsById, action) => {
+    let newArrayPosition;
+    let newSongsByIdEntry;
+    let newSongsByIdStateSlice;
+    switch (action.type) {
+      case 'NEXT_LYRIC':
+        newArrayPosition = state[action.currentSongId].arrayPosition + 1;
+        newSongsByIdEntry = Object.assign({}, state[action.currentSongId], {
+          arrayPosition: newArrayPosition
+        })
+        newSongsByIdStateSlice = Object.assign({}, state, {
+          [action.currentSongId]: newSongsByIdEntry
+        });
+        return newSongsByIdStateSlice;
+      case 'RESTART_SONG':
+        newSongsByIdEntry = Object.assign({}, state[action.currentSongId], {
+          arrayPosition: 0
+        })
+        newSongsByIdStateSlice = Object.assign({}, state, {
+          [action.currentSongId]: newSongsByIdEntry
+        });
+        return newSongsByIdStateSlice;
+      default:
+        return state;
+    }
   }
-     //if there are already lyrics in this div, remove them one-by-one until it's empty. 
-  const currentLine = store.getState().songLyricsArray
-  [store.getState().arrayPosition];
-  //locates the song lyric at the current arrayPosition
-  const renderedLine = document.createTextNode(currentLine);
-  //creates DOM text node containing the song lyric identified:
-  document.getElementById('lyrics').appendChild(renderedLine);
-  //adds text node created 2 lines up to 'lyrics' div in DOM
-}
-
-//run renderLyrics() method from above when paged is finised loading.
-//window.onload is HTML5 version of jQuery's $(document).ready()
-window.onload = function () {
-  renderLyrics();
-}
-
-//CLICK LISTENER
-//when the user clicks the page, userClick() is invoked, thanks to this line from index.html: <body style='height:100vh' onClick='userClick()'
+  
+  const songChangeReducer = (state = initialState.currentSongId, action) => {
+    switch (action.type){
+      case 'CHANGE_SONG':
+        return action.newSelectedSongId
+      default:
+        return state;
+    }
+  }
+  
+  const rootReducer = this.Redux.combineReducers({
+    currentSongId: songChangeReducer,
+    songsById: lyricChangeReducer
+  });
+  
+  //Redux store
+  const { createStore } = Redux;
+  const store = createStore(rootReducer);
+  
+  
+  //Jest test+ setup will go here
+  const { expect } = window;
+  expect(lyricChangeReducer(initialState.songsById, {type: null})).toEqual(initialState.songsById);
+  
+  expect(lyricChangeReducer(initialState.songsById, { type: 'NEXT_LYRIC', currentSongId: 2 })).toEqual({
+    1: {
+      title: "Bye Bye Bye",
+      artist: "N'Sync",
+      songId: 1,
+      songArray: songList[1],
+      arrayPosition: 0,
+    },
+    2: {
+      title: "What's Goin' On",
+      artist: "Four Non-Blondes",
+      songId: 2,
+      songArray: songList[2],
+      arrayPosition: 1,
+    }
+  });
+  
+  expect(lyricChangeReducer(initialState.songsById, { type: 'RESTART_SONG', currentSongId: 1 })).toEqual({
+    1: {
+      title: "Bye Bye Bye",
+      artist: "N'Sync",
+      songId: 1,
+      songArray: songList[1],
+      arrayPosition: 0,
+    },
+    2: {
+      title: "What's Goin' On",
+      artist: "Four Non-Blondes",
+      songId: 2,
+      songArray: songList[2],
+      arrayPosition: 0,
+    }
+  });
+  
+  expect(songChangeReducer(initialState, { type: null })).toEqual(initialState);
+  expect(songChangeReducer(initialState.currentSongId, { type: 'CHANGE_SONG', newSelectedSongId: 1 })).toEqual(1);
+  
+  expect(rootReducer(initialState, { type: null })).toEqual(initialState);
+  expect(store.getState().currentSongId).toEqual(songChangeReducer(undefined, { type: null }));
+  expect(store.getState().songsById).toEqual(lyricChangeReducer(undefined, { type: null }));
+  
+  
+  //Rendering state in DOM
+  const renderLyrics = () => {
+    const lyricsDisplay = document.getElementById('lyrics');
+    while (lyricsDisplay.firstChild) {
+      lyricsDisplay.removeChild(lyricsDisplay.firstChild);
+    }
+  
+    if (store.getState().currentSongId) {
+      const currentLine = document.createTextNode(store.getState().songsById[store.getState().currentSongId].songArray[store.getState().songsById[store.getState().currentSongId].arrayPosition]);
+      document.getElementById('lyrics').appendChild(currentLine);
+    } else {
+      const selectSongMessage = document.createTextNode("Select a song from the menu above to sing along!");
+      document.getElementById('lyrics').appendChild(selectSongMessage);
+    }
+  }
+  const renderSongs = () => {
+    console.log('renderSongs method successfully fired!');
+    console.log(store.getState());
+    const songsById = store.getState().songsById;
+    for (const songKey in songsById) {
+      const song = songsById[songKey];
+      const li = document.createElement('li');
+      const h3 = document.createElement('h3');
+      h3.addEventListener('click', function() {
+        selectSong(song.songId);
+      });
+      const em = document.createElement('em');
+      const songTitle = document.createTextNode(song.title);
+      const songArtist = document.createTextNode(' by ' + song.artist);
+      em.appendChild(songTitle);
+      h3.appendChild(em);
+      h3.appendChild(songArtist);
+      h3.addEventListener('click', function() {
+        selectSong(song.songId);
+      });
+      li.appendChild(h3);
+      document.getElementById('songs').appendChild(li);
+    }
+  }
+  
+  window.onload = function() {
+    renderSongs();
+    renderLyrics();
+    }
+  
+  //click listeners
   const userClick = () => {
-        store.dispatch({ type: 'NEXT_LYRIC'} );
-        //logic to dispatch a Redux action with a TYPE of NEXT_LYRIC. the action includes a NEXT_LYRIC type, so the reducer will run its NEXT_LYRIC case, which is what increments arrayPosition by 1. The reducer handles returning the object containing state. 
-        console.log(store.getState());
+    if (store.getState().songsById[store.getState().currentSongId].arrayPosition === store.getState().songsById[store.getState().currentSongId].songArray.length - 1) {
+      store.dispatch({ type: 'RESTART_SONG', currentSongId: store.getState().currentSongId });
+    } else {
+      store.dispatch({ type: 'NEXT_LYRIC', currentSongId: store.getState().currentSongId });
+    }
+  }
+  
+  const selectSong = (newSongId) => {
+    let action;
+    if (store.getState().currentSongId) {
+      action = {
+        type: 'RESTART_SONG',
+        currentSongId: store.getState().currentSongId
       }
+      store.dispatch(action);
+    }
+    action = {
+      type: 'CHANGE_SONG',
+      newSelectedSongId: newSongId
+    }
+    store.dispatch(action);
+  }
+  
+  
+  
+  // SUBSCRIBE TO REDUX STORE
+  store.subscribe(renderLyrics);
